@@ -52,9 +52,26 @@
             cursor: pointer;
             font-size: 18px;
             width: 100%;
+            margin-bottom: 10px;
         }
         .form-container button[type="submit"]:hover {
             background-color: #0056b3;
+        }
+        .form-container .sign-up-btn {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 100%;
+            display: block;
+            text-align: center;
+            text-decoration: none;
+        }
+        .form-container .sign-up-btn:hover {
+            background-color: #218838;
         }
         .alert {
             margin-top: 20px;
@@ -75,7 +92,8 @@
                 {{ form.password.label }}
                 {{ form.password(class_="form-control") }}
             </div>
-            <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+            <button type="submit" class="btn btn-primary">Login</button>
+            <a href="/sign_up" class="sign-up-btn">Sign Up</a>
         </form>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
