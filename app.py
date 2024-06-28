@@ -16,14 +16,61 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret_key')  # Ensure you have a secret key set
 app.config['SESSION_TYPE'] = 'filesystem'
 
-# Sign Up Page
-# Sign Up Process
-# Attendance (reports)
 
-# Admin data (temp)
-users = {
-    "admin": "123456"
-}
+# Sign Up Page
+@app.route('/sign_up')
+def sign_up():
+    return render_template('signUpAdmin.html')
+
+# Sign Up Process
+def signup_admin(username, password):
+
+    try:
+        conn = sqlite3.connect('attendance.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS admin (
+                admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                password TEXT
+            )
+        ''')
+        cursor.execute('''
+            INSERT INTO admin (username, password)
+            VALUES (?, ?)
+        ''', (username, password))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        flash("Admin already exists.", "danger")
+        return False
+    except Exception as e:
+        flash(f"An error occurred: {e}", "danger")
+        return False
+    finally:
+        conn.close()
+
+    return True
+
+@app.route('/signup_admin_action', methods=['POST'])
+def signup_admin_action():
+    username = request.form['username']
+    password = request.form['password']
+    confirm_password = request.form['confirm_password']
+
+    # Check if password and confirm_password match
+    if password != confirm_password:
+        flash("Passwords do not match!", "danger")
+        return redirect(url_for('sign_up'))
+
+    # Call signup_admin function to perform registration
+    registration_successful = signup_admin(username, password)
+
+    if registration_successful:
+        flash(f"Admin ({username}) registered successfully!", "success")
+    else:
+        flash("Registration failed. Please try again.", "danger")
+
+    return redirect(url_for('sign_up'))
 
 # Login Process (index)
 class LoginForm(FlaskForm):
@@ -38,13 +85,22 @@ def index():
         username = form.username.data
         password = form.password.data
 
-        # Check credentials
-        if username in users and users[username] == password:
-            session['username'] = username
+        # Query the database to check credentials
+        try:
+            conn = sqlite3.connect('attendance.db')
+            cursor = conn.cursor()
+            cursor.execute('SELECT password FROM admin WHERE username = ?', (username,))
+            admin = cursor.fetchone()
 
-            return redirect(url_for('track_attendance_page'))
-        else:
-            flash('Invalid username or password', 'danger')
+            if admin and admin[0] == password:
+                session['username'] = username
+                return redirect(url_for('track_attendance_page'))
+            else:
+                flash('Invalid username or password', 'danger')
+        except Exception as e:
+            flash(f"An error occurred: {e}", 'danger')
+        finally:
+            conn.close()
 
     return render_template('login.html', form=form, selected_date='', no_data=False)
 
@@ -536,6 +592,8 @@ def release_camera():
     """Release the camera and cleanup resources."""
     face_register.release_camera()
     return jsonify(status="Camera released")
+
+# Attendance Report Function
 
 if __name__ == '__main__':
     app.run(debug=True)
