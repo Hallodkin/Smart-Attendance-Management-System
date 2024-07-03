@@ -593,7 +593,43 @@ def release_camera():
     face_register.release_camera()
     return jsonify(status="Camera released")
 
+# Attendance Report Page
+@app.route('/attendance_report')
+def attendance_report_page():
+    if 'username' not in session:
+        flash('You need to login first.', 'danger')
+        return redirect(url_for('index'))
+    return render_template('attendance_report.html', username=session["username"])
+
 # Attendance Report Function
+@app.route('/attendance_report_action', methods=['POST'])
+def attendance_report_action():
+    try:
+        selected_date = request.form.get('dateSearch')
+
+        if not selected_date:
+            return render_template('attendance_report.html', message="Please select a valid date.")
+
+        selected_date_obj = datetime.strptime(selected_date, '%Y-%m-%d')
+        formatted_date = selected_date_obj.strftime('%Y-%m-%d')
+
+        conn = sqlite3.connect('attendance.db')
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT name, time, date FROM attendance WHERE date = ?", (formatted_date,))
+        attendance_data = cursor.fetchall()
+
+        conn.close()
+
+        if not attendance_data:
+            return render_template('attendance_report.html', selected_date=selected_date, no_data=True)
+
+        return render_template('attendance_report.html', selected_date=selected_date, attendance_data=attendance_data)
+
+    except Exception as e:
+        # Handle specific exceptions as needed, for instance:
+        print(f"Error: {str(e)}")
+        return render_template('attendance_report.html', message="An error occurred while processing your request.")
 
 if __name__ == '__main__':
     app.run(debug=True)
